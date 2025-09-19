@@ -102,6 +102,34 @@ const App: React.FC = () => {
     useEffect(() => {
         setDeliverySlots(getDeliverySlots());
     }, []);
+    
+    // Load order history from localStorage on initial render
+    useEffect(() => {
+        try {
+            const storedOrders = localStorage.getItem("chapatiOrderHistory");
+            if (storedOrders) {
+                const parsedOrders: Order[] = JSON.parse(storedOrders).map((order: any) => ({
+                    ...order,
+                    deliveryDate: new Date(order.deliveryDate), // Re-hydrate date string to Date object
+                }));
+                setOrderHistory(parsedOrders);
+            }
+        } catch (error) {
+            console.error("Failed to parse order history from localStorage", error);
+        }
+    }, []);
+
+    // Save order history to localStorage whenever it changes
+    useEffect(() => {
+        try {
+            if (orderHistory.length > 0) {
+              localStorage.setItem("chapatiOrderHistory", JSON.stringify(orderHistory));
+            }
+        } catch (error) {
+            console.error("Failed to save order history to localStorage", error);
+        }
+    }, [orderHistory]);
+
 
     const handleDateSelect = (date: Date) => {
         setSelectedDate(date);
@@ -127,9 +155,15 @@ const App: React.FC = () => {
             alert("Please select a delivery date.");
             return;
         }
+        
+        // Validate that the chosen selectedDate exists in your deliverySlots and is available
+        if (!deliverySlots.some(slot => slot.isAvailable && slot.date.getTime() === selectedDate.getTime())) {
+            alert("The selected delivery date is not valid or is no longer available. Please choose another date.");
+            return;
+        }
 
         const newOrder: Order = {
-            id: `ORD-${Date.now()}`,
+            id: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             deliveryDate: selectedDate,
             quantity: quantity,
             totalPrice: quantity * PRICE_PER_BOX,
